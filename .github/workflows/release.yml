@@ -1,0 +1,114 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  # ── Linux builds (amd64 + arm64) ───────────────────────────────────────
+  # CGO is required (libvirt, augeas). Builds for both linux architectures
+  # on a single ubuntu runner using GOAMD64/GOARCH.
+  release-linux:
+    name: Release Linux (${{ matrix.arch }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [amd64, arm64]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install CGO dependencies
+        run: sudo apt-get update && sudo apt-get install -y libvirt-dev libaugeas-dev pkg-config
+
+      - name: Install Go tools (nex, goyacc, stringer)
+        run: |
+          go install github.com/blynn/nex@latest
+          go install golang.org/x/tools/cmd/goyacc@latest
+          go install golang.org/x/tools/cmd/stringer@latest
+
+      - name: Generate language frontend + WASM resources
+        run: make lang resources
+
+      - name: Build mgmt
+        env:
+          GOOS: linux
+          GOARCH: ${{ matrix.arch }}
+        run: |
+          make lang resources
+          go build -ldflags "-s -w -X main.program=mgmt -X main.version=${{ github.ref_name }}" -o mgmt-${{ matrix.arch }} .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mgmt-linux-${{ matrix.arch }}
+          path: mgmt-${{ matrix.arch }}
+          retention-days: 5
+
+  # ── macOS build (arm64) ────────────────────────────────────────────────
+  # CGO works natively on macOS runners — no extra system deps needed
+  # beyond what's in the Go toolchain.
+  release-darwin:
+    name: Release Darwin (arm64)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install Go tools (nex, goyacc, stringer)
+        run: |
+          go install github.com/blynn/nex@latest
+          go install golang.org/x/tools/cmd/goyacc@latest
+          go install golang.org/x/tools/cmd/stringer@latest
+
+      - name: Generate language frontend + WASM resources
+        run: make lang resources
+
+      - name: Build mgmt
+        env:
+          GOOS: darwin
+          GOARCH: arm64
+        run: |
+          make lang resources
+          go build -ldflags "-s -w -X main.program=mgmt -X main.version=${{ github.ref_name }}" -o mgmt-darwin-arm64 .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mgmt-darwin-arm64
+          path: mgmt-darwin-arm64
+          retention-days: 5
+
+  # ── Publish to GitHub Releases ─────────────────────────────────────────
+  publish:
+    name: Publish
+    needs: [release-linux, release-darwin]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: mgmt-*
+          merge-multiple: true
+
+      - name: Generate checksums
+        run: sha256sum mgmt-* > checksums.txt
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            mgmt-linux-amd64
+            mgmt-linux-arm64
+            mgmt-darwin-arm64
+            checksums.txt
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}

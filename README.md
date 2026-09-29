@@ -1,4 +1,12 @@
 # *mgmt*: next generation config management!
+> **Note:** This repository is a fork of [purpleidea/mgmt](https://github.com/purpleidea/mgmt).
+> Original source: https://github.com/purpleidea/mgmt
+>
+> James Shubin ([@purpleidea](https://github.com/purpleidea)) welcomes support via
+> [GitHub Sponsors](https://github.com/sponsors/purpleidea),
+> [PayPal](https://paypal.me/purpleidea),
+> [Liberapay](https://liberapay.com/purpleidea), and
+> [Patreon](https://www.patreon.com/purpleidea).
 
 [![mgmt!](art/mgmt.png)](art/)
 

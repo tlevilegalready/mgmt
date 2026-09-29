@@ -1,71 +1,138 @@
-# Docs: https://help.github.com/en/articles/workflow-syntax-for-github-actions
+name: Test
 
-# If the name is omitted, it uses the filename instead.
-#name: Test
 on:
-  # Run on all pull requests.
   pull_request:
-    #branches:
-    #- master
-  # Run on all pushes.
   push:
-  # Run daily at 4am.
   schedule:
-  - cron: 0 4 * * *
+    - cron: '0 4 * * 1'  # weekly Monday 04:00 UTC (regression safety net)
 
 jobs:
-  maketest:
-    name: Test (${{ matrix.test_block }}) on ${{ matrix.os }} with golang ${{ matrix.golang_version }}
+  # ── Build ──────────────────────────────────────────────────────────────
+  build:
+    name: Build (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
-    env:
-      GOPATH: /home/runner/work/mgmt/mgmt/go
     strategy:
+      fail-fast: false
       matrix:
-        # TODO: Add tip when it's supported: https://github.com/actions/setup-go/issues/21
         os:
           - ubuntu-latest
-          # macos tests are currently failing in CI
-          #- macos-latest
-        golang_version:
-          # TODO: add 1.27.x and tip
-          # minimum required and latest published go_version
-          - "1.26"
-        test_block:
-          - basic
-          - shell
-          - race
-      fail-fast: false
-
+          - macos-latest
     steps:
-      # Do not shallow fetch. The path can't be absolute, so we need to move it
-      # to the expected location later.
-      - name: Clone mgmt
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v7
         with:
-          submodules: recursive
-          fetch-depth: 0
-          path: ./go/src/github.com/purpleidea/mgmt
-
-      - name: Install Go ${{ matrix.golang_version }}
-        uses: actions/setup-go@v4
-        with:
-          go-version: ${{ matrix.golang_version }}
+          go-version-file: go.mod
           cache: true
-          cache-dependency-path: |
-            go/src/github.com/purpleidea/mgmt/go.sum
 
-      # Install & configure ruby, fixes gem permissions error
-      - name: Install Ruby
-        uses: ruby/setup-ruby@v1
+      - name: Install CGO dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: sudo apt-get update && sudo apt-get install -y libvirt-dev libaugeas-dev pkg-config
+
+      - name: Install Go tools (nex, goyacc, stringer)
+        run: |
+          go install github.com/blynn/nex@latest
+          go install golang.org/x/tools/cmd/goyacc@latest
+          go install golang.org/x/tools/cmd/stringer@latest
+
+      - name: Generate language frontend + WASM resources
+        run: make lang resources
+
+      - name: Build
+        run: make build
+
+  # ── Go tests (Linux) ───────────────────────────────────────────────────
+  go-tests:
+    name: Go tests (${{ matrix.block }})
+    needs: build
+    runs-on: ubuntu-latest
+    env:
+      TEST_BLOCK: ${{ matrix.block }}
+    strategy:
+      fail-fast: false
+      matrix:
+        block: [basic, race, shell]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v7
         with:
-          ruby-version: head
+          go-version-file: go.mod
+          cache: true
 
-      - name: Install dependencies
-        working-directory: ./go/src/github.com/purpleidea/mgmt
-        run: |
-          make deps
+      - name: Install CGO dependencies
+        run: sudo apt-get update && sudo apt-get install -y libvirt-dev libaugeas-dev pkg-config
 
-      - name: Run test
-        working-directory: ./go/src/github.com/purpleidea/mgmt
+      - name: Install Go tools (nex, goyacc, stringer)
         run: |
-          TEST_BLOCK="${{ matrix.test_block }}" make test
+          go install github.com/blynn/nex@latest
+          go install golang.org/x/tools/cmd/goyacc@latest
+          go install golang.org/x/tools/cmd/stringer@latest
+
+      # ── Tools needed only by the "basic" block ────────────────────────
+      - name: Install linting tools (basic only)
+        if: matrix.block == 'basic'
+        run: |
+          # golangci-lint
+          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b "$(go env GOPATH)/bin" v2.2.2
+          # Ruby + mdl for markdown lint
+          sudo apt-get update && sudo apt-get install -y ruby ruby-dev
+          sudo gem install mdl -v 0.15.0 --no-document
+
+      - name: Build test tools (reflowed-comments, receiver-check, txtarfmt)
+        if: matrix.block == 'basic'
+        run: make -C test
+
+      - name: Generate language frontend + WASM resources
+        run: make lang resources
+
+      - name: Build
+        run: make build
+
+      - name: Run tests
+        run: TEST_BLOCK="$TEST_BLOCK" make test
+
+  # ── Go tests (macOS) ───────────────────────────────────────────────────
+  go-tests-macos:
+    name: Go tests (macOS ${{ matrix.block }})
+    needs: build
+    runs-on: macos-latest
+    env:
+      TEST_BLOCK: ${{ matrix.block }}
+    strategy:
+      fail-fast: false
+      matrix:
+        block: [basic, shell]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install CGO dependencies
+        run: brew install libvirt augeas pkg-config
+
+      - name: Install Go tools (nex, goyacc, stringer)
+        run: |
+          go install github.com/blynn/nex@latest
+          go install golang.org/x/tools/cmd/goyacc@latest
+          go install golang.org/x/tools/cmd/stringer@latest
+
+      - name: Install linting tools (basic only)
+        if: matrix.block == 'basic'
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b "$(go env GOPATH)/bin" v2.2.2
+          brew install ruby
+          sudo gem install mdl -v 0.15.0 --no-document
+
+      - name: Build test tools (basic only)
+        if: matrix.block == 'basic'
+        run: make -C test
+
+      - name: Generate language frontend + WASM resources
+        run: make lang resources
+
+      - name: Build
+        run: make build
+
+      - name: Run tests
+        run: TEST_BLOCK="$TEST_BLOCK" make test

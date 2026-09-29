@@ -42,14 +42,4 @@ git push your-remote your-feature
 hub pull-request	# or submit with the github web ui
 ```
 
-* After a patch review, please ping @purpleidea so we know to re-review:
-
-```
-# make changes based on reviews...
-git add -p		# add new changes
-git commit --amend	# combine with existing commit
-git push your-remote your-feature -f
-# now ping @purpleidea in the github PR since it doesn't notify us automatically
-```
-
 ## Thanks for contributing to mgmt and welcome to the team!
