@@ -26,13 +26,14 @@ jobs:
 
       - name: Install CGO dependencies
         if: matrix.os == 'ubuntu-latest'
-        run: sudo apt-get update && sudo apt-get install -y libvirt-dev libaugeas-dev pkg-config
+        run: sudo apt-get update && sudo apt-get install -y libvirt-dev libaugeas-dev pkg-config gcc
 
       - name: Install Go tools (nex, goyacc, stringer)
         run: |
           go install github.com/blynn/nex@latest
           go install golang.org/x/tools/cmd/goyacc@latest
           go install golang.org/x/tools/cmd/stringer@latest
+          go install golang.org/x/tools/cmd/goimports@latest
 
       - name: Generate language frontend + WASM resources
         run: make lang resources
@@ -59,13 +60,14 @@ jobs:
           cache: true
 
       - name: Install CGO dependencies
-        run: sudo apt-get update && sudo apt-get install -y libvirt-dev libaugeas-dev pkg-config
+        run: sudo apt-get update && sudo apt-get install -y libvirt-dev libaugeas-dev pkg-config gcc ragel
 
-      - name: Install Go tools (nex, goyacc, stringer)
+      - name: Install Go tools (nex, goyacc, stringer, goimports)
         run: |
           go install github.com/blynn/nex@latest
           go install golang.org/x/tools/cmd/goyacc@latest
           go install golang.org/x/tools/cmd/stringer@latest
+          go install golang.org/x/tools/cmd/goimports@latest
 
       # ── Tools needed only by the "basic" block ────────────────────────
       - name: Install linting tools (basic only)
@@ -111,11 +113,12 @@ jobs:
       - name: Install CGO dependencies
         run: brew install libvirt augeas pkg-config
 
-      - name: Install Go tools (nex, goyacc, stringer)
+      - name: Install Go tools (nex, goyacc, stringer, goimports)
         run: |
           go install github.com/blynn/nex@latest
           go install golang.org/x/tools/cmd/goyacc@latest
           go install golang.org/x/tools/cmd/stringer@latest
+          go install golang.org/x/tools/cmd/goimports@latest
 
       - name: Install linting tools (basic only)
         if: matrix.block == 'basic'
