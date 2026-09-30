@@ -39,42 +39,13 @@ jobs:
       - name: Build
         run: make build
 
-  # ---- macOS build + test (GNU make via brew gnubin) ------------------------------------
-  build-macos:
-    name: Build (darwin-arm64)
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          fetch-tags: true
-          fetch-depth: 0
-      - uses: actions/setup-go@v7
-        with:
-          go-version-file: go.mod
-          cache: true
-
-      - name: Install GNU make + Go tools
-        run: |
-          brew install make
-          echo "$(brew --prefix)/opt/make/libexec/gnubin" >> $GITHUB_PATH
-          go install github.com/blynn/nex@latest
-          go install golang.org/x/tools/cmd/goyacc@latest
-          go install golang.org/x/tools/cmd/stringer@latest
-          go install golang.org/x/tools/cmd/goimports@latest
-
-      - name: Generate language frontend + WASM resources
-        run: make lang resources
-
-      - name: Build
-        run: make build
-
   # ---- Go tests (Linux) -- parallel groups for go-test + shell ------------------------------------
   # Basic block split into 2 parallel groups to reduce 254s -> ~70s
   # Group 1: lang, engine/resources, engine/graph, etcd
   # Group 2: known slow packages (lang, engine/resources, engine/graph, etcd) (cli, converger, util, etc.)
   go-tests-basic-1:
     name: Go tests (basic group 1 - fast)
-    needs: [build, build-macos]
+    needs: build
     runs-on: ubuntu-26.04
     env:
       TEST_BLOCK: basic
@@ -120,7 +91,7 @@ jobs:
 
   go-tests-basic-2:
     name: Go tests (basic group 2 + shell - slow)
-    needs: [build, build-macos]
+    needs: build
     runs-on: ubuntu-26.04
     env:
       TEST_BLOCK: basic
@@ -236,6 +207,6 @@ jobs:
         if: steps.check-go.outputs.has_go != '1'
         run: echo "Skipping race detector -- no Go code changes"
 
-# ---- macOS build now enabled (GNU make via brew gnubin) ---------------------------------------------------
-# Build job runs on macOS-latest (darwin-arm64) with GNU make from brew.
-# go-tests jobs run on Linux (amd64) as before.
+# ---- macOS disabled ---------------------------------------------------------------------------------------------
+# The upstream Makefile has sed commands that fail on macOS (BSD sed).
+# TODO: Fix sed portability issues in lang/Makefile to re-enable macOS CI.
