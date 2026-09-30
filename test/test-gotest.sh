@@ -51,9 +51,10 @@ else
 	packages=()
 	# Split packages into groups for parallel CI execution
 	# Group 1: larger/slower packages (lang, engine/resources, engine/graph, etcd)
-	group1="engine/resources engine/graph lang etcd"
-	# Group 2: everything else
-	group2="cli converger engine/util engine/graph/autogroup engine/local engine/resources/packagekit etcd/fs etcd/util lang/ast lang/core lang/core/convert lang/core/datetime lang/core/fmt lang/core/math lang/core/net lang/core/regexp lang/format lang/types lang/funcs lang/inputs lang/parser lang/interpolate lang/interpret lib misc pgp pgraph prometheus scheduler setup tools util util/errwrap util/gettext util/grow util/password util/pprof util/recwatch util/safepath util/semaphore util/signals util/socketset util/sshutil yamlgraph"
+	# Group 1: everything except the known slow packages
+	group1="cli converger engine/util engine/graph/autogroup engine/local engine/resources/packagekit etcd/fs etcd/util lang/ast lang/core lang/core/convert lang/core/datetime lang/core/fmt lang/core/math lang/core/net lang/core/regexp lang/format lang/types lang/funcs lang/inputs lang/parser lang/interpolate lang/interpret lib misc pgp pgraph prometheus scheduler setup tools util util/errwrap util/gettext util/grow util/password util/pprof util/recwatch util/safepath util/semaphore util/signals util/socketset util/sshutil yamlgraph"
+	# Group 2: known slow packages (lang, engine/resources, engine/graph, etcd)
+	group2="engine/resources engine/graph lang etcd"
 
 	if [[ -n "$TEST_GROUP" ]]; then
 		case "$TEST_GROUP" in

@@ -10,7 +10,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # ---- Build (Linux only -- macOS disabled temporarily, see below) ------------------
+  # ---- Build (Linux) ---------------------------------------------------
   build:
     name: Build (linux-amd64)
     runs-on: ubuntu-26.04
@@ -39,13 +39,36 @@ jobs:
       - name: Build
         run: make build
 
+  # ---- macOS build + test (GNU make via brew gnubin) ------------------------------------
+  build-macos:
+    name: Build (darwin-arm64)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-tags: true
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Install GNU make (needed for upstream Makefile)
+        run: |
+          brew install make
+          echo "$(brew --prefix)/opt/make/libexec/gnubin" >> $GITHUB_PATH
+
+      - name: Generate language frontend + WASM resources
+        run: make lang resources
+
+      - name: Build
+        run: make build
+
   # ---- Go tests (Linux) -- parallel groups for go-test + shell ------------------------------------
   # Basic block split into 2 parallel groups to reduce 254s -> ~70s
   # Group 1: lang, engine/resources, engine/graph, etcd
-  # Group 2: everything else (cli, converger, util, etc.)
+  # Group 2: known slow packages (lang, engine/resources, engine/graph, etcd) (cli, converger, util, etc.)
   go-tests-basic-1:
-    name: Go tests (basic, group 1)
-    needs: build
+    name: Go tests (basic group 1 - fast)
+    needs: [build, build-macos]
     runs-on: ubuntu-26.04
     env:
       TEST_BLOCK: basic
@@ -90,8 +113,8 @@ jobs:
         run: TEST_BLOCK="$TEST_BLOCK" TEST_GROUP="$TEST_GROUP" make test
 
   go-tests-basic-2:
-    name: Go tests (basic, group 2)
-    needs: build
+    name: Go tests (basic group 2 + shell - slow)
+    needs: [build, build-macos]
     runs-on: ubuntu-26.04
     env:
       TEST_BLOCK: basic
@@ -132,49 +155,18 @@ jobs:
       - name: Build
         run: make build
 
-      - name: Run tests
-        run: TEST_BLOCK="$TEST_BLOCK" TEST_GROUP="$TEST_GROUP" make test
+      - name: Run basic tests
+        run: TEST_BLOCK=basic TEST_GROUP=2 make test
 
-  go-tests-shell:
-    name: Go tests (shell)
-    needs: build
-    runs-on: ubuntu-26.04
-    env:
-      TEST_BLOCK: shell
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          fetch-tags: true
-      - uses: actions/setup-go@v7
-        with:
-          go-version-file: go.mod
-          cache: true
-
-      - name: Install CGO dependencies
-        run: sudo apt-get update && sudo apt-get install -y libvirt-dev libaugeas-dev pkg-config gcc ragel inotify-tools
-
-      - name: Install Go tools (nex, goyacc, stringer, goimports)
-        run: |
-          go install github.com/blynn/nex@latest
-          go install golang.org/x/tools/cmd/goyacc@latest
-          go install golang.org/x/tools/cmd/stringer@latest
-          go install golang.org/x/tools/cmd/goimports@latest
-
-      - name: Generate language frontend + WASM resources
-        run: make lang resources
-
-      - name: Build
-        run: make build
-
-      - name: Run tests
-        run: TEST_BLOCK="$TEST_BLOCK" make test
+      - name: Run shell tests
+        run: TEST_BLOCK=shell make test
 
   # ---- Go tests (race detector) -- runs last, only on Go code changes --------------------
   # The race detector adds 5-10x overhead. Only run when Go code changed,
   # and run last so it doesn't block other tests.
   go-tests-race:
     name: Go tests (race)
-    needs: [build, go-tests-basic-1, go-tests-basic-2, go-tests-shell]
+    needs: [build, go-tests-basic-1, go-tests-basic-2]
     runs-on: ubuntu-26.04
     if: |
       github.event_name == 'schedule' ||
@@ -238,9 +230,6 @@ jobs:
         if: steps.check-go.outputs.has_go != '1'
         run: echo "Skipping race detector -- no Go code changes"
 
-# ---- macOS temporarily disabled ----------------------------------------------------------------------------------------
-# The upstream Makefile uses GNU make extensions that fail on macOS's BSD make.
-# Fix requires either:
-#   1. Add GNU make to PATH on macOS runners (gmake via brew, gnubin on PATH)
-#   2. Patch upstream Makefile to use POSIX-compatible make syntax
-# TODO: re-enable with `brew install make && echo "$(brew --prefix)/opt/make/libexec/gnubin" >> $GITHUB_PATH`
+# ---- macOS build now enabled (GNU make via brew gnubin) ---------------------------------------------------
+# Build job runs on macOS-latest (darwin-arm64) with GNU make from brew.
+# go-tests jobs run on Linux (amd64) as before.

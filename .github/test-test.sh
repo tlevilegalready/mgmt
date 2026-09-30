@@ -19,16 +19,17 @@ make -C test
 echo "=== Building mgmt ==="
 make build
 
-# ---- Run basic block (lint + tests) --------------------------------------------------------------------------------
-echo "=== Running basic block ==="
-TEST_BLOCK=basic make test
+# ---- Run Group 1 (everything except slow packages) ----------------------------------------------------------
+echo "=== Running Group 1 (fast packages) ==="
+TEST_BLOCK=basic TEST_GROUP=1 make test
 
-# ---- Run race block ----------------------------------------------------------------------------------------------------------------
+# ---- Run Group 2 (slow packages) + Shell --------------------------------------------------------------------
+echo "=== Running Group 2 (slow packages) + Shell ==="
+TEST_BLOCK=basic TEST_GROUP=2 make test
+TEST_BLOCK=shell make test
+
+# ---- Run race block (weekly + on Go code changes in CI) -----------------------------------------------------
 echo "=== Running race block ==="
 TEST_BLOCK=race make test
-
-# ---- Run shell block --------------------------------------------------------------------------------------------------------------
-echo "=== Running shell block ==="
-TEST_BLOCK=shell make test
 
 echo "=== ALL TESTS PASSED ==="
