@@ -53,7 +53,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: mgmt-static-${{ matrix.os }}-${{ matrix.arch }}
-          path: mgmt-${{ matrix.arch }}
+          path: mgmt-static-${{ matrix.os }}-${{ matrix.arch }}
           retention-days: 5
 
   # ---- macOS build (arm64) ------------------------------------------------------------------------------------------------
