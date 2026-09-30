@@ -222,7 +222,7 @@ jobs:
 
       - name: Install GNU make, GNU sed + Go tools
         run: |
-          brew install make gnu-sed
+          brew install make gnu-sed ragel
           echo "$(brew --prefix)/opt/make/libexec/gnubin" >> $GITHUB_PATH
           go install github.com/blynn/nex@latest
           go install golang.org/x/tools/cmd/goyacc@latest
