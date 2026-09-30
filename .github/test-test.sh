@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Test runner — mirrors .github/workflows/test.yaml go-tests jobs
+# Test runner -- mirrors .github/workflows/test.yaml go-tests jobs
 # Runs all test blocks: basic, race, shell
 set -euo pipefail
 

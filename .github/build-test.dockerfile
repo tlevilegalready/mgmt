@@ -17,7 +17,7 @@ RUN wget -qO- https://go.dev/dl/go1.26.8.linux-amd64.tar.gz | tar -C /usr/local 
     && go install golang.org/x/tools/cmd/stringer@latest \
     && go install golang.org/x/tools/cmd/goimports@latest
 
-# Layer 3: Download Go module cache (cached — invalidates on go.mod change)
+# Layer 3: Download Go module cache (cached -- invalidates on go.mod change)
 COPY go.mod go.sum /mgmt/
 WORKDIR /mgmt
 RUN go mod download
