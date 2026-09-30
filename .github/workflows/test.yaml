@@ -220,10 +220,12 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - name: Install GNU make, GNU sed + Go tools
+      - name: Install macOS dependencies (GNU make, GNU sed, CGO deps, Go tools)
         run: |
-          brew install make gnu-sed ragel libvirt augeas libxml2 pkg-config
+          brew install make gnu-sed ragel libvirt augeas libxml2
           echo "$(brew --prefix)/opt/make/libexec/gnubin" >> $GITHUB_PATH
+          export PKG_CONFIG_PATH="$(brew --prefix)/lib/pkgconfig:$(brew --prefix)/share/pkgconfig:$PKG_CONFIG_PATH"
+          echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH" >> $GITHUB_ENV
           go install github.com/blynn/nex@latest
           go install golang.org/x/tools/cmd/goyacc@latest
           go install golang.org/x/tools/cmd/stringer@latest
