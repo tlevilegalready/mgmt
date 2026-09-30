@@ -6,7 +6,7 @@ on:
       - 'v*'
 
 jobs:
-  # ── Linux builds (amd64 + arm64) ───────────────────────────────────────
+  # ---- Linux builds (amd64 + arm64) ------------------------------------------------------------------------------
   release-linux:
     name: Release Linux (${{ matrix.arch }})
     runs-on: ubuntu-latest
@@ -50,14 +50,14 @@ jobs:
           path: mgmt-${{ matrix.arch }}
           retention-days: 5
 
-  # ── macOS build (arm64) ────────────────────────────────────────────────
+  # ---- macOS build (arm64) ------------------------------------------------------------------------------------------------
   # TEMPORARILY DISABLED — GNU make issue (same as test.yaml)
   # release-darwin:
   #   name: Release Darwin (arm64)
   #   runs-on: macos-latest
   #   ...
 
-  # ── Publish to GitHub Releases ─────────────────────────────────────────
+  # ---- Publish to GitHub Releases ----------------------------------------------------------------------------------
   publish:
     name: Publish
     needs: [release-linux]

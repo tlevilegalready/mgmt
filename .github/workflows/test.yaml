@@ -7,7 +7,7 @@ on:
     - cron: '0 4 * * 1'  # weekly Monday 04:00 UTC (regression safety net)
 
 jobs:
-  # ── Build (Linux only — macOS disabled temporarily, see below) ─────────
+  # ---- Build (Linux only — macOS disabled temporarily, see below) ------------------
   build:
     name: Build (linux-amd64)
     runs-on: ubuntu-latest
@@ -34,7 +34,7 @@ jobs:
       - name: Build
         run: make build
 
-  # ── Go tests (Linux) ───────────────────────────────────────────────────
+  # ---- Go tests (Linux) ------------------------------------------------------------------------------------------------------
   go-tests:
     name: Go tests (${{ matrix.block }})
     needs: build
@@ -65,7 +65,7 @@ jobs:
       - name: Generate language frontend + WASM resources
         run: make lang resources
 
-      # ── Tools needed only by the "basic" block ────────────────────────
+      # ---- Tools needed only by the "basic" block ------------------------------------------------
       - name: Install linting tools (basic only)
         if: matrix.block == 'basic'
         run: |
@@ -85,7 +85,7 @@ jobs:
       - name: Run tests
         run: TEST_BLOCK="$TEST_BLOCK" make test
 
-# ── macOS temporarily disabled ────────────────────────────────────────────
+# ---- macOS temporarily disabled ----------------------------------------------------------------------------------------
 # The upstream Makefile uses GNU make extensions that fail on macOS's BSD make.
 # Fix requires either:
 #   1. Add GNU make to PATH on macOS runners (gmake via brew, gnubin on PATH)
