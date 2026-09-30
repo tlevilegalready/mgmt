@@ -39,17 +39,17 @@ jobs:
       - name: Build
         run: make build
 
-  # ---- Go tests (Linux) -- runs basic and shell in parallel ------------------------
-  go-tests:
-    name: Go tests (${{ matrix.block }})
+  # ---- Go tests (Linux) -- parallel groups for go-test + shell ------------------------------------
+  # Basic block split into 2 parallel groups to reduce 254s -> ~70s
+  # Group 1: lang, engine/resources, engine/graph, etcd
+  # Group 2: everything else (cli, converger, util, etc.)
+  go-tests-basic-1:
+    name: Go tests (basic, group 1)
     needs: build
     runs-on: ubuntu-26.04
     env:
-      TEST_BLOCK: ${{ matrix.block }}
-    strategy:
-      fail-fast: false
-      matrix:
-        block: [basic, shell]
+      TEST_BLOCK: basic
+      TEST_GROUP: 1
     steps:
       - uses: actions/checkout@v6
         with:
@@ -72,9 +72,7 @@ jobs:
       - name: Generate language frontend + WASM resources
         run: make lang resources
 
-      # ---- Tools needed only by the "basic" block ------------------------------------------------
-      - name: Install linting tools (basic only)
-        if: matrix.block == 'basic'
+      - name: Install linting tools
         run: |
           # golangci-lint (build from source to match Go 1.26)
           go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.2.2
@@ -83,8 +81,87 @@ jobs:
           sudo gem install mdl -v 0.15.0 --no-document
 
       - name: Build test tools (reflowed-comments, receiver-check, txtarfmt)
-        if: matrix.block == 'basic'
         run: make -C test
+
+      - name: Build
+        run: make build
+
+      - name: Run tests
+        run: TEST_BLOCK="$TEST_BLOCK" TEST_GROUP="$TEST_GROUP" make test
+
+  go-tests-basic-2:
+    name: Go tests (basic, group 2)
+    needs: build
+    runs-on: ubuntu-26.04
+    env:
+      TEST_BLOCK: basic
+      TEST_GROUP: 2
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-tags: true
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install CGO dependencies
+        run: sudo apt-get update && sudo apt-get install -y libvirt-dev libaugeas-dev pkg-config gcc ragel inotify-tools
+
+      - name: Install Go tools (nex, goyacc, stringer, goimports)
+        run: |
+          go install github.com/blynn/nex@latest
+          go install golang.org/x/tools/cmd/goyacc@latest
+          go install golang.org/x/tools/cmd/stringer@latest
+          go install golang.org/x/tools/cmd/goimports@latest
+
+      - name: Generate language frontend + WASM resources
+        run: make lang resources
+
+      - name: Install linting tools
+        run: |
+          # golangci-lint (build from source to match Go 1.26)
+          go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.2.2
+          # Ruby + mdl for markdown lint
+          sudo apt-get update && sudo apt-get install -y ruby ruby-dev
+          sudo gem install mdl -v 0.15.0 --no-document
+
+      - name: Build test tools (reflowed-comments, receiver-check, txtarfmt)
+        run: make -C test
+
+      - name: Build
+        run: make build
+
+      - name: Run tests
+        run: TEST_BLOCK="$TEST_BLOCK" TEST_GROUP="$TEST_GROUP" make test
+
+  go-tests-shell:
+    name: Go tests (shell)
+    needs: build
+    runs-on: ubuntu-26.04
+    env:
+      TEST_BLOCK: shell
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-tags: true
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install CGO dependencies
+        run: sudo apt-get update && sudo apt-get install -y libvirt-dev libaugeas-dev pkg-config gcc ragel inotify-tools
+
+      - name: Install Go tools (nex, goyacc, stringer, goimports)
+        run: |
+          go install github.com/blynn/nex@latest
+          go install golang.org/x/tools/cmd/goyacc@latest
+          go install golang.org/x/tools/cmd/stringer@latest
+          go install golang.org/x/tools/cmd/goimports@latest
+
+      - name: Generate language frontend + WASM resources
+        run: make lang resources
 
       - name: Build
         run: make build
@@ -97,7 +174,7 @@ jobs:
   # and run last so it doesn't block other tests.
   go-tests-race:
     name: Go tests (race)
-    needs: [build, go-tests]
+    needs: [build, go-tests-basic-1, go-tests-basic-2, go-tests-shell]
     runs-on: ubuntu-26.04
     if: |
       github.event_name == 'schedule' ||
