@@ -54,17 +54,17 @@ else
 	group1="engine/resources engine/graph lang etcd"
 	# Group 2: everything else
 	group2="cli converger engine/util engine/graph/autogroup engine/local engine/resources/packagekit etcd/fs etcd/util lang/ast lang/core lang/core/convert lang/core/datetime lang/core/fmt lang/core/math lang/core/net lang/core/regexp lang/format lang/types lang/funcs lang/inputs lang/parser lang/interpolate lang/interpret lib misc pgp pgraph prometheus scheduler setup tools util util/errwrap util/gettext util/grow util/password util/pprof util/recwatch util/safepath util/semaphore util/signals util/socketset util/sshutil yamlgraph"
-	
+
 	if [[ -n "$TEST_GROUP" ]]; then
 		case "$TEST_GROUP" in
 			1) packages=($(echo $group1 | xargs -n1 | sed "s|^|${base}/|"));;
 			2) packages=($(echo $group2 | xargs -n1 | sed "s|^|${base}/|"));;
-			*) echo "Unknown TEST_GROUP, running all";;  
+			*) echo "Unknown TEST_GROUP, running all";;
 		esac
 	else
 		packages=($(go list -e ./... | grep -v "^${base}/vendor/" | grep -v "^${base}/examples/" | grep -v "^${base}/test/" | grep -v "^${base}/old" | grep -v "^${base}/old/" | grep -v "^${base}/tmp" | grep -v "^${base}/tmp/" | grep -v "^${base}/integration"))
 	fi
-	
+
 	if [[ "$@" = *"--integration"* ]]; then
 		if [[ "$@" = *"--race"* ]]; then
 			run-test go test -count=1 -race "${base}/integration" -v
@@ -75,11 +75,11 @@ else
 		for pkg in "${packages[@]}"; do
 			[ -z "$pkg" ] && continue
 			echo -e "\ttesting: $pkg"
-			
+
 			if [ "$pkg" = "${base}/engine/resources/http_server_ui" ]; then
 				continue # skip this special main package
 			fi
-			
+
 			if [[ "$@" = *"--race"* ]]; then
 				if [ "$pkg" = "${base}/lang" ]; then
 					for sub in `go test "${base}/lang" -list Test`; do
