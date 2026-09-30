@@ -55,9 +55,11 @@ jobs:
 
       - name: Install GNU make + Go tools
         run: |
-          brew install make goyacc stringer
+          brew install make
           echo "$(brew --prefix)/opt/make/libexec/gnubin" >> $GITHUB_PATH
           go install github.com/blynn/nex@latest
+          go install golang.org/x/tools/cmd/goyacc@latest
+          go install golang.org/x/tools/cmd/stringer@latest
           go install golang.org/x/tools/cmd/goimports@latest
 
       - name: Generate language frontend + WASM resources
