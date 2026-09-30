@@ -4,6 +4,9 @@ on:
   push:
     tags:
       - 'v*'
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   # ---- Linux builds (amd64 + arm64) ------------------------------------------------------------------------------

@@ -5,6 +5,9 @@ on:
   push:
   schedule:
     - cron: '0 4 * * 1'  # weekly Monday 04:00 UTC (regression safety net)
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   # ---- Build (Linux only -- macOS disabled temporarily, see below) ------------------
