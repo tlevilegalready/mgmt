@@ -47,6 +47,12 @@ jobs:
           CGO_ENABLED: 1
         run: |
           make lang resources
+          # Cross-compile: use aarch64 cross-compiler for arm64
+          if [ "${{ matrix.arch }}" = "arm64" ]; then
+            sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+            export CC=aarch64-linux-gnu-gcc
+            export CXX=aarch64-linux-gnu-g++
+          fi
           go build -ldflags "-s -w -X main.program=mgmt -X main.version=${{ github.ref_name }}" -o mgmt-static-${{ matrix.os }}-${{ matrix.arch }} .
 
       - name: Upload artifact
