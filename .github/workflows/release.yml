@@ -51,51 +51,16 @@ jobs:
           retention-days: 5
 
   # ── macOS build (arm64) ────────────────────────────────────────────────
-  release-darwin:
-    name: Release Darwin (arm64)
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-go@v7
-        with:
-          go-version-file: go.mod
-          cache: true
-
-      - name: Install GNU make
-        run: |
-          brew install make
-          echo "$(brew --prefix)/opt/make/libexec/gnubin" >> $GITHUB_PATH
-
-      - name: Install Go tools (nex, goyacc, stringer, goimports)
-        run: |
-          go install github.com/blynn/nex@latest
-          go install golang.org/x/tools/cmd/goyacc@latest
-          go install golang.org/x/tools/cmd/stringer@latest
-          go install golang.org/x/tools/cmd/goimports@latest
-
-      - name: Generate language frontend + WASM resources
-        run: make lang resources
-
-      - name: Build mgmt
-        env:
-          GOOS: darwin
-          GOARCH: arm64
-          CGO_ENABLED: 1
-        run: |
-          make lang resources
-          go build -ldflags "-s -w -X main.program=mgmt -X main.version=${{ github.ref_name }}" -o mgmt-darwin-arm64 .
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: mgmt-darwin-arm64
-          path: mgmt-darwin-arm64
-          retention-days: 5
+  # TEMPORARILY DISABLED — GNU make issue (same as test.yaml)
+  # release-darwin:
+  #   name: Release Darwin (arm64)
+  #   runs-on: macos-latest
+  #   ...
 
   # ── Publish to GitHub Releases ─────────────────────────────────────────
   publish:
     name: Publish
-    needs: [release-linux, release-darwin]
+    needs: [release-linux]
     runs-on: ubuntu-latest
     steps:
       - name: Download artifacts
@@ -113,7 +78,7 @@ jobs:
           files: |
             mgmt-linux-amd64
             mgmt-linux-arm64
-            mgmt-darwin-arm64
+            # mgmt-darwin-arm64  # disabled until macOS make issue resolved
             checksums.txt
           draft: false
           prerelease: ${{ contains(github.ref_name, '-') }}
