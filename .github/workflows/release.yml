@@ -109,12 +109,13 @@ jobs:
       - name: Install CGO dependencies
         run: sudo apt-get update && sudo apt-get install -y libvirt-dev libaugeas-dev pkg-config gcc ragel inotify-tools
 
-      - name: Install Go tools + markdown lint
+      - name: Install Go tools + markdown lint + golangci-lint
         run: |
           go install github.com/blynn/nex@latest
           go install golang.org/x/tools/cmd/goyacc@latest
           go install golang.org/x/tools/cmd/stringer@latest
           go install golang.org/x/tools/cmd/goimports@latest
+          go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.2.2
           sudo apt-get update && sudo apt-get install -y ruby ruby-dev
           sudo gem install mdl -v 0.15.0 --no-document
 
