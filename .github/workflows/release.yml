@@ -32,7 +32,7 @@ jobs:
           go install golang.org/x/tools/cmd/goimports@latest
 
       - name: Generate language frontend + WASM resources
-        run: gmake lang resources
+        run: make lang resources
 
       - name: Build mgmt
         env:
@@ -40,7 +40,7 @@ jobs:
           GOARCH: ${{ matrix.arch }}
           CGO_ENABLED: 1
         run: |
-          gmake lang resources
+          make lang resources
           go build -ldflags "-s -w -X main.program=mgmt -X main.version=${{ github.ref_name }}" -o mgmt-${{ matrix.arch }} .
 
       - name: Upload artifact
@@ -62,7 +62,9 @@ jobs:
           cache: true
 
       - name: Install GNU make
-        run: brew install make
+        run: |
+          brew install make
+          echo "$(brew --prefix)/opt/make/libexec/gnubin" >> $GITHUB_PATH
 
       - name: Install Go tools (nex, goyacc, stringer, goimports)
         run: |
@@ -72,7 +74,7 @@ jobs:
           go install golang.org/x/tools/cmd/goimports@latest
 
       - name: Generate language frontend + WASM resources
-        run: gmake lang resources
+        run: make lang resources
 
       - name: Build mgmt
         env:
@@ -80,7 +82,7 @@ jobs:
           GOARCH: arm64
           CGO_ENABLED: 1
         run: |
-          gmake lang resources
+          make lang resources
           go build -ldflags "-s -w -X main.program=mgmt -X main.version=${{ github.ref_name }}" -o mgmt-darwin-arm64 .
 
       - name: Upload artifact

@@ -26,7 +26,9 @@ jobs:
 
       - name: Install GNU make (macOS)
         if: matrix.os == 'macos-latest'
-        run: brew install make
+        run: |
+          brew install make
+          echo "$(brew --prefix)/opt/make/libexec/gnubin" >> $GITHUB_PATH
 
       - name: Install CGO dependencies
         if: matrix.os == 'ubuntu-latest'
@@ -40,10 +42,10 @@ jobs:
           go install golang.org/x/tools/cmd/goimports@latest
 
       - name: Generate language frontend + WASM resources
-        run: gmake lang resources
+        run: make lang resources
 
       - name: Build
-        run: gmake build
+        run: make build
 
   # ── Go tests (Linux) ───────────────────────────────────────────────────
   go-tests:
@@ -85,16 +87,16 @@ jobs:
 
       - name: Build test tools (reflowed-comments, receiver-check, txtarfmt)
         if: matrix.block == 'basic'
-        run: gmake -C test
+        run: make -C test
 
       - name: Generate language frontend + WASM resources
-        run: gmake lang resources
+        run: make lang resources
 
       - name: Build
-        run: gmake build
+        run: make build
 
       - name: Run tests
-        run: TEST_BLOCK="$TEST_BLOCK" gmake test
+        run: TEST_BLOCK="$TEST_BLOCK" make test
 
   # ── Go tests (macOS) ───────────────────────────────────────────────────
   go-tests-macos:
@@ -115,7 +117,9 @@ jobs:
           cache: true
 
       - name: Install GNU make
-        run: brew install make
+        run: |
+          brew install make
+          echo "$(brew --prefix)/opt/make/libexec/gnubin" >> $GITHUB_PATH
 
       - name: Install CGO dependencies
         run: brew install libvirt augeas pkg-config
@@ -136,13 +140,13 @@ jobs:
 
       - name: Build test tools (basic only)
         if: matrix.block == 'basic'
-        run: gmake -C test
+        run: make -C test
 
       - name: Generate language frontend + WASM resources
-        run: gmake lang resources
+        run: make lang resources
 
       - name: Build
-        run: gmake build
+        run: make build
 
       - name: Run tests
-        run: TEST_BLOCK="$TEST_BLOCK" gmake test
+        run: TEST_BLOCK="$TEST_BLOCK" make test
