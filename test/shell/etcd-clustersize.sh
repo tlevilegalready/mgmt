@@ -2,6 +2,11 @@
 
 . "$(dirname "$0")/../util.sh"
 
+
+if in_env github; then
+	echo "Skipping etcd tests in CI (port conflicts)"
+	exit
+fi
 set -o errexit
 set -o pipefail
 
