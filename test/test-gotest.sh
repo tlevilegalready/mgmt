@@ -47,37 +47,62 @@ if [[ "$@" = *"--integration"* ]]; then
 		run-test go test -count=1 "${base}/integration" -v
 	fi
 else
-	for pkg in `go list -e ./... | grep -v "^${base}/vendor/" | grep -v "^${base}/examples/" | grep -v "^${base}/test/" | grep -v "^${base}/old" | grep -v "^${base}/old/" | grep -v "^${base}/tmp" | grep -v "^${base}/tmp/" | grep -v "^${base}/integration"`; do
-		echo -e "\ttesting: $pkg"
-
-		if [ "$pkg" = "github.com/purpleidea/mgmt/engine/resources/http_server_ui" ]; then
-			continue # skip this special main package
-		fi
-
+	base=$(go list .)
+	packages=()
+	# Split packages into groups for parallel CI execution
+	# Group 1: larger/slower packages (lang, engine/resources, engine/graph, etcd)
+	group1="engine/resources engine/graph lang etcd"
+	# Group 2: everything else
+	group2="cli converger engine/util engine/graph/autogroup engine/local engine/resources/packagekit etcd/fs etcd/util lang/ast lang/core lang/core/convert lang/core/datetime lang/core/fmt lang/core/math lang/core/net lang/core/regexp lang/format lang/types lang/funcs lang/inputs lang/parser lang/interpolate lang/interpret lib misc pgp pgraph prometheus scheduler setup tools util util/errwrap util/gettext util/grow util/password util/pprof util/recwatch util/safepath util/semaphore util/signals util/socketset util/sshutil yamlgraph"
+	
+	if [[ -n "$TEST_GROUP" ]]; then
+		case "$TEST_GROUP" in
+			1) packages=($(echo $group1 | xargs -n1 | sed "s|^|${base}/|"));;
+			2) packages=($(echo $group2 | xargs -n1 | sed "s|^|${base}/|"));;
+			*) echo "Unknown TEST_GROUP, running all";;  
+		esac
+	else
+		packages=($(go list -e ./... | grep -v "^${base}/vendor/" | grep -v "^${base}/examples/" | grep -v "^${base}/test/" | grep -v "^${base}/old" | grep -v "^${base}/old/" | grep -v "^${base}/tmp" | grep -v "^${base}/tmp/" | grep -v "^${base}/integration"))
+	fi
+	
+	if [[ "$@" = *"--integration"* ]]; then
 		if [[ "$@" = *"--race"* ]]; then
-			# split up long tests to avoid CI timeouts
-			if [ "$pkg" = "${base}/lang" ]; then # pkg lang is big!
-				for sub in `go test "${base}/lang" -list Test`; do
-					if [ "$sub" = "ok" ]; then break; fi # skip go test output artifact
-					echo -e "\t\tsub-testing: $sub"
-					run-test go test -count=1 -race "$pkg" -run "$sub"
-				done
-			else
-				run-test go test -count=1 -race "$pkg"
-			fi
+			run-test go test -count=1 -race "${base}/integration" -v
 		else
-			# split up long tests to avoid CI timeouts
-			if [ "$pkg" = "${base}/lang" ]; then # pkg lang is big!
-				for sub in `go test "${base}/lang" -list Test`; do
-					if [ "$sub" = "ok" ]; then break; fi # skip go test output artifact
-					echo -e "\t\tsub-testing: $sub"
-					run-test go test -count=1 "$pkg" -run "$sub"
-				done
-			else
-				run-test go test -count=1 "$pkg"
-			fi
+			run-test go test -count=1 "${base}/integration" -v
 		fi
-	done
+	else
+		for pkg in "${packages[@]}"; do
+			[ -z "$pkg" ] && continue
+			echo -e "\ttesting: $pkg"
+			
+			if [ "$pkg" = "${base}/engine/resources/http_server_ui" ]; then
+				continue # skip this special main package
+			fi
+			
+			if [[ "$@" = *"--race"* ]]; then
+				if [ "$pkg" = "${base}/lang" ]; then
+					for sub in `go test "${base}/lang" -list Test`; do
+						if [ "$sub" = "ok" ]; then break; fi
+						echo -e "\t\tsub-testing: $sub"
+						run-test go test -count=1 -race "$pkg" -run "$sub"
+					done
+				else
+					run-test go test -count=1 -race "$pkg"
+				fi
+			else
+				if [ "$pkg" = "${base}/lang" ]; then
+					for sub in `go test "${base}/lang" -list Test`; do
+						if [ "$sub" = "ok" ]; then break; fi
+						echo -e "\t\tsub-testing: $sub"
+						run-test go test -count=1 "$pkg" -run "$sub"
+					done
+				else
+					run-test go test -count=1 "$pkg"
+				fi
+			fi
+		done
+	fi
 fi
 
 if [[ -n "$failures" ]]; then
