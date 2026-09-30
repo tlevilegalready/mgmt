@@ -15,7 +15,7 @@ FORBIDDEN='[‘’“”←→–—…±]'
 
 # exclude files that are expected to contain non-ASCII
 find_files() {
-	repo_files | grep -vE '^(lang/core/generated_funcs.go|AUTHORS|THANKS|go.sum|data/locales/.*\.po)$'
+	repo_files | grep -vE '^(lang/core/generated_funcs.go|AUTHORS|THANKS|go.sum|data/locales/.*\.po|lang/format/astfmt/astfmt.go)$'
 }
 
 bad_files=$(

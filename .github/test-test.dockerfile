@@ -20,7 +20,8 @@ RUN wget -qO- https://go.dev/dl/go1.26.8.linux-amd64.tar.gz | tar -C /usr/local 
     && go install github.com/blynn/nex@latest \
     && go install golang.org/x/tools/cmd/goyacc@latest \
     && go install golang.org/x/tools/cmd/stringer@latest \
-    && go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.2.2
+    && go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.2.2 \
+    && go install golang.org/x/tools/cmd/goimports@latest
 
 # Layer 3: Download Go module cache (cached)
 COPY go.mod go.sum /mgmt/
