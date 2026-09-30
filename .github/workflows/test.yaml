@@ -45,7 +45,7 @@ jobs:
   # Group 2: known slow packages (lang, engine/resources, engine/graph, etcd) (cli, converger, util, etc.)
   go-tests-basic-1:
     name: Go tests (basic group 1 - fast)
-    needs: build
+    needs: [build, build-macos]
     runs-on: ubuntu-26.04
     env:
       TEST_BLOCK: basic
@@ -91,7 +91,7 @@ jobs:
 
   go-tests-basic-2:
     name: Go tests (basic group 2 + shell - slow)
-    needs: build
+    needs: [build, build-macos]
     runs-on: ubuntu-26.04
     env:
       TEST_BLOCK: basic
@@ -207,6 +207,29 @@ jobs:
         if: steps.check-go.outputs.has_go != '1'
         run: echo "Skipping race detector -- no Go code changes"
 
-# ---- macOS disabled ---------------------------------------------------------------------------------------------
-# The upstream Makefile has sed commands that fail on macOS (BSD sed).
-# TODO: Fix sed portability issues in lang/Makefile to re-enable macOS CI.
+  # ---- macOS build + test (GNU sed via brew) ---------------------------------------------------
+  build-macos:
+    name: Build (darwin-arm64)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-tags: true
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install GNU sed + Go tools
+        run: |
+          brew install gnu-sed
+          go install github.com/blynn/nex@latest
+          go install golang.org/x/tools/cmd/goyacc@latest
+          go install golang.org/x/tools/cmd/stringer@latest
+          go install golang.org/x/tools/cmd/goimports@latest
+
+      - name: Generate language frontend + WASM resources
+        run: make lang resources
+
+      - name: Build
+        run: make build
