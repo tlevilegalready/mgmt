@@ -40,10 +40,10 @@ jobs:
           go install golang.org/x/tools/cmd/goimports@latest
 
       - name: Generate language frontend + WASM resources
-        run: make lang resources
+        run: gmake lang resources
 
       - name: Build
-        run: make build
+        run: gmake build
 
   # ── Go tests (Linux) ───────────────────────────────────────────────────
   go-tests:
@@ -85,16 +85,16 @@ jobs:
 
       - name: Build test tools (reflowed-comments, receiver-check, txtarfmt)
         if: matrix.block == 'basic'
-        run: make -C test
+        run: gmake -C test
 
       - name: Generate language frontend + WASM resources
-        run: make lang resources
+        run: gmake lang resources
 
       - name: Build
-        run: make build
+        run: gmake build
 
       - name: Run tests
-        run: TEST_BLOCK="$TEST_BLOCK" make test
+        run: TEST_BLOCK="$TEST_BLOCK" gmake test
 
   # ── Go tests (macOS) ───────────────────────────────────────────────────
   go-tests-macos:
@@ -136,13 +136,13 @@ jobs:
 
       - name: Build test tools (basic only)
         if: matrix.block == 'basic'
-        run: make -C test
+        run: gmake -C test
 
       - name: Generate language frontend + WASM resources
-        run: make lang resources
+        run: gmake lang resources
 
       - name: Build
-        run: make build
+        run: gmake build
 
       - name: Run tests
-        run: TEST_BLOCK="$TEST_BLOCK" make test
+        run: TEST_BLOCK="$TEST_BLOCK" gmake test
