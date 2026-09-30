@@ -40,7 +40,7 @@ clean:
 parser/lexer.nn.go: parser/lexer.nex
 	@echo "Generating: lexer..."
 	nex -e -o $@ $<
-	sed -i $$'/^import (/ {N;N;N;N;/^import (\\n\t"bufio"\\n\t"io"\\n\t"strings"\\n)/d;}' $@ # get rid of the duplicate imports
+	(TMP=$$(mktemp) && sed -e '/^import (/{N;N;N;N;/^import (\\n\\t"bufio"\\n\\t"io"\\n\\t"strings"\\n)/d;}' $$@ > $$TMP && mv $$TMP $$@) || true
 	gofmt -s -w $@
 	@ROOT="$$( cd "$$( dirname "$${BASH_SOURCE[0]}" )" && cd .. && pwd )" && $$ROOT/misc/header.sh '$@'
 
