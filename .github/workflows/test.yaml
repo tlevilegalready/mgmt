@@ -62,6 +62,9 @@ jobs:
           go install golang.org/x/tools/cmd/stringer@latest
           go install golang.org/x/tools/cmd/goimports@latest
 
+      - name: Generate language frontend + WASM resources
+        run: make lang resources
+
       # ── Tools needed only by the "basic" block ────────────────────────
       - name: Install linting tools (basic only)
         if: matrix.block == 'basic'
@@ -75,9 +78,6 @@ jobs:
       - name: Build test tools (reflowed-comments, receiver-check, txtarfmt)
         if: matrix.block == 'basic'
         run: make -C test
-
-      - name: Generate language frontend + WASM resources
-        run: make lang resources
 
       - name: Build
         run: make build
