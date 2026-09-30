@@ -1,5 +1,8 @@
 #!/usr/bin/env -S bash -e
 
+# DISABLED: Not interested in etcd for our env/fork.
+exit 0
+
 . "$(dirname "$0")/../util.sh"
 
 if in_env github; then

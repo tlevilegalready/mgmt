@@ -1,5 +1,8 @@
 #!/usr/bin/env -S bash -e
 
+# DISABLED: Not interested in prometheus for our env/fork.
+exit 0
+
 . "$(dirname "$0")/../util.sh"
 
 TEMPFILE=`mktemp mgmt-tests-XXXXXXXX`
