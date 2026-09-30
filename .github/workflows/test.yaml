@@ -7,10 +7,10 @@ on:
     - cron: '0 4 * * 1'  # weekly Monday 04:00 UTC (regression safety net)
 
 jobs:
-  # ---- Build (Linux only — macOS disabled temporarily, see below) ------------------
+  # ---- Build (Linux only -- macOS disabled temporarily, see below) ------------------
   build:
     name: Build (linux-amd64)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-go@v7
@@ -34,17 +34,17 @@ jobs:
       - name: Build
         run: make build
 
-  # ---- Go tests (Linux) ------------------------------------------------------------------------------------------------------
+  # ---- Go tests (Linux) -- runs basic and shell in parallel ------------------------
   go-tests:
     name: Go tests (${{ matrix.block }})
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     env:
       TEST_BLOCK: ${{ matrix.block }}
     strategy:
       fail-fast: false
       matrix:
-        block: [basic, race, shell]
+        block: [basic, shell]
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-go@v7
@@ -84,6 +84,73 @@ jobs:
 
       - name: Run tests
         run: TEST_BLOCK="$TEST_BLOCK" make test
+
+  # ---- Go tests (race detector) -- runs last, only on Go code changes --------------------
+  # The race detector adds 5-10x overhead. Only run when Go code changed,
+  # and run last so it doesn't block other tests.
+  go-tests-race:
+    name: Go tests (race)
+    needs: [build, go-tests]
+    runs-on: ubuntu-26.04
+    if: |
+      github.event_name == 'schedule' ||
+      (github.event_name == 'push' && github.event.head_commit.files) ||
+      (github.event_name == 'pull_request' && github.event.pull_request.files)
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Check for Go code changes
+        id: check-go
+        shell: bash
+        run: |
+          changed_files=""
+          if [ "${{ github.event_name }}" = "push" ]; then
+            changed_files=$(echo '${{ toJSON(github.event.head_commit.files) }}')
+          elif [ "${{ github.event_name }}" = "pull_request" ]; then
+            changed_files=$(echo '${{ toJSON(github.event.pull_request.files) }}')
+          fi
+
+          if echo "$changed_files" | grep -q '\.go$'; then
+            echo "has_go=1" >> "$GITHUB_OUTPUT"
+            echo "Go code detected in changes, running race detector"
+          else
+            echo "has_go=0" >> "$GITHUB_OUTPUT"
+            echo "No Go code changes detected, skipping race detector"
+          fi
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+        if: steps.check-go.outputs.has_go == '1'
+
+      - name: Install CGO dependencies
+        if: steps.check-go.outputs.has_go == '1'
+        run: sudo apt-get update && sudo apt-get install -y libvirt-dev libaugeas-dev pkg-config gcc ragel
+
+      - name: Install Go tools (nex, goyacc, stringer, goimports)
+        if: steps.check-go.outputs.has_go == '1'
+        run: |
+          go install github.com/blynn/nex@latest
+          go install golang.org/x/tools/cmd/goyacc@latest
+          go install golang.org/x/tools/cmd/stringer@latest
+          go install golang.org/x/tools/cmd/goimports@latest
+
+      - name: Generate language frontend + WASM resources
+        if: steps.check-go.outputs.has_go == '1'
+        run: make lang resources
+
+      - name: Build
+        if: steps.check-go.outputs.has_go == '1'
+        run: make build
+
+      - name: Run tests (race)
+        if: steps.check-go.outputs.has_go == '1'
+        run: TEST_BLOCK=race make test
+
+      - name: Skip race detector
+        if: steps.check-go.outputs.has_go != '1'
+        run: echo "Skipping race detector -- no Go code changes"
 
 # ---- macOS temporarily disabled ----------------------------------------------------------------------------------------
 # The upstream Makefile uses GNU make extensions that fail on macOS's BSD make.

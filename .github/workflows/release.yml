@@ -9,7 +9,7 @@ jobs:
   # ---- Linux builds (amd64 + arm64) ------------------------------------------------------------------------------
   release-linux:
     name: Release Linux (${{ matrix.arch }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     strategy:
       fail-fast: false
       matrix:
@@ -61,7 +61,7 @@ jobs:
   publish:
     name: Publish
     needs: [release-linux]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v4
