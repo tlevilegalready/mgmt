@@ -47,14 +47,18 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-tags: true
+          fetch-depth: 0
       - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
           cache: true
-      - name: Install GNU make (needed for upstream Makefile)
+
+      - name: Install GNU make + Go tools
         run: |
-          brew install make
+          brew install make goyacc stringer
           echo "$(brew --prefix)/opt/make/libexec/gnubin" >> $GITHUB_PATH
+          go install github.com/blynn/nex@latest
+          go install golang.org/x/tools/cmd/goimports@latest
 
       - name: Generate language frontend + WASM resources
         run: make lang resources
