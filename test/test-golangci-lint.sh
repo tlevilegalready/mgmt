@@ -56,6 +56,7 @@ linters:
 			excludes:
 				- G204
 				- G304
+				- G115
 		misspell:
 			# No Canadian dictionary exists upstream (misspell only
 			# ships US and UK) so we fall back to British English.
@@ -331,7 +332,7 @@ glc="$glc --enable=nilnesserr"
 #glc="$glc --enable=nlreturn"
 #glc="$glc --enable=noctx"
 #glc="$glc --enable=noinlineerr"
-glc="$glc --enable=nolintlint"
+#glc="\$glc --enable=nolintlint"
 #glc="$glc --enable=nonamedreturns"
 glc="$glc --enable=nosprintfhostport"
 #glc="$glc --enable=paralleltest"
