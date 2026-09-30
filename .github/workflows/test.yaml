@@ -220,9 +220,10 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - name: Install GNU sed + Go tools
+      - name: Install GNU make, GNU sed + Go tools
         run: |
-          brew install gnu-sed
+          brew install make gnu-sed
+          echo "$(brew --prefix)/opt/make/libexec/gnubin" >> $GITHUB_PATH
           go install github.com/blynn/nex@latest
           go install golang.org/x/tools/cmd/goyacc@latest
           go install golang.org/x/tools/cmd/stringer@latest
