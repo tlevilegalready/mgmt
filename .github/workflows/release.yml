@@ -109,12 +109,14 @@ jobs:
       - name: Install CGO dependencies
         run: sudo apt-get update && sudo apt-get install -y libvirt-dev libaugeas-dev pkg-config gcc ragel inotify-tools
 
-      - name: Install Go tools
+      - name: Install Go tools + markdown lint
         run: |
           go install github.com/blynn/nex@latest
           go install golang.org/x/tools/cmd/goyacc@latest
           go install golang.org/x/tools/cmd/stringer@latest
           go install golang.org/x/tools/cmd/goimports@latest
+          sudo apt-get update && sudo apt-get install -y ruby ruby-dev
+          sudo gem install mdl -v 0.15.0 --no-document
 
       - name: Generate language frontend + WASM resources
         run: make lang resources
