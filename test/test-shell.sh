@@ -12,6 +12,11 @@ cd "${ROOT}"
 . test/util.sh
 cd - >/dev/null
 
+# kill any lingering mgmt/etcd processes from previous test runs (CI port conflicts)
+killall -9 mgmt 2>/dev/null || true
+killall -9 etcd 2>/dev/null || true
+sleep 1
+
 if [ "$1" == "--help" ] || [ "$1" == "-h" ]; then
 	echo -e "usage: ./"`basename $0`" [[--help] | <test>]"
 	echo -e "where: <test> is empty to run all tests, or <file>.sh from shell/ dir"
