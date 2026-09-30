@@ -7,7 +7,7 @@ FROM ubuntu:26.04
 
 # Layer 1: System deps (cached)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates wget git make gcc pkg-config ragel curl inotify-tools \
+    ca-certificates wget git make gcc pkg-config ragel curl inotify-tools psmisc \
     libvirt-dev libaugeas-dev \
     ruby ruby-dev \
     && rm -rf /var/lib/apt/lists/*

@@ -52,10 +52,12 @@ for test_script in $DIR/test/shell/*.sh; do
 		fail_test "Can't remove symlink in /tmp/mgmt/"
 	fi
 	rm -rf '/tmp/mgmt/'	# clean up after test
-	# kill any lingering mgmt/etcd processes between tests (CI port conflicts)
+	# Kill any lingering mgmt/etcd processes between tests (CI port conflicts)
 	killall -9 mgmt 2>/dev/null || true
 	killall -9 etcd 2>/dev/null || true
-	sleep 1
+	# Force-kill anything on default etcd ports
+	fuser -k 2379/tcp 2380/tcp 2>/dev/null || true
+	sleep 2
 	if [ $e -ne 0 ]; then
 		echo -e "FAIL\t$test_name"	# fail
 		# store failures...
