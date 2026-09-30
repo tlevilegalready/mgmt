@@ -12,15 +12,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # ---- Linux builds (amd64 + arm64) ------------------------------------------------------------------------------
-  release-linux:
-    name: Release Linux (${{ matrix.arch }})
+  # ---- Linux amd64 build -----------------------------------------------------------------------------------------
+  build-linux-amd64:
+    name: Build (linux-amd64)
     runs-on: ubuntu-26.04
-    strategy:
-      fail-fast: false
-      matrix:
-        arch: [amd64]
-        os: [linux]
     steps:
       - uses: actions/checkout@v6
         with:
@@ -33,7 +28,130 @@ jobs:
       - name: Install CGO dependencies
         run: sudo apt-get update && sudo apt-get install -y libvirt-dev libaugeas-dev pkg-config gcc ragel
 
-      - name: Install Go tools (nex, goyacc, stringer, goimports)
+      - name: Install Go tools
+        run: |
+          go install github.com/blynn/nex@latest
+          go install golang.org/x/tools/cmd/goyacc@latest
+          go install golang.org/x/tools/cmd/stringer@latest
+          go install golang.org/x/tools/cmd/goimports@latest
+
+      - name: Build
+        env:
+          GOOS: linux
+          GOARCH: amd64
+          CGO_ENABLED: 1
+        run: |
+          make lang resources
+          go build -ldflags "-s -w -X main.program=mgmt -X main.version=${{ github.ref_name }}" -o mgmt-static-linux-amd64 .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mgmt-static-linux-amd64
+          path: mgmt-static-linux-amd64
+          retention-days: 5
+
+  # ---- Linux arm64 build (cross-compile) -------------------------------------------------------------------------
+  build-linux-arm64:
+    name: Build (linux-arm64)
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-tags: true
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install CGO cross-compile deps
+        run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu binutils-aarch64-linux-gnu libvirt-dev libaugeas-dev pkg-config ragel
+
+      - name: Install Go tools
+        run: |
+          go install github.com/blynn/nex@latest
+          go install golang.org/x/tools/cmd/goyacc@latest
+          go install golang.org/x/tools/cmd/stringer@latest
+          go install golang.org/x/tools/cmd/goimports@latest
+
+      - name: Build
+        env:
+          GOOS: linux
+          GOARCH: arm64
+          CGO_ENABLED: 1
+          CC: aarch64-linux-gnu-gcc
+          CXX: aarch64-linux-gnu-g++
+          PKG_CONFIG_PATH: /usr/lib/aarch64-linux-gnu/pkgconfig:/usr/lib/pkgconfig
+        run: |
+          make lang resources
+          go build -ldflags "-s -w -X main.program=mgmt -X main.version=${{ github.ref_name }}" -o mgmt-static-linux-arm64 .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mgmt-static-linux-arm64
+          path: mgmt-static-linux-arm64
+          retention-days: 5
+
+  # ---- Darwin arm64 build ----------------------------------------------------------------------------------------
+  build-darwin-arm64:
+    name: Build (darwin-arm64)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-tags: true
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install macOS deps
+        run: |
+          brew install make gnu-sed ragel libvirt augeas libxml2
+          echo "$(brew --prefix)/opt/make/libexec/gnubin" >> $GITHUB_PATH
+          export PKG_CONFIG_PATH="$(brew --prefix)/lib/pkgconfig:$(brew --prefix)/share/pkgconfig:$PKG_CONFIG_PATH"
+          echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH" >> $GITHUB_ENV
+          go install github.com/blynn/nex@latest
+          go install golang.org/x/tools/cmd/goyacc@latest
+          go install golang.org/x/tools/cmd/stringer@latest
+          go install golang.org/x/tools/cmd/goimports@latest
+
+      - name: Build
+        env:
+          GOOS: darwin
+          GOARCH: arm64
+          CGO_ENABLED: 1
+          PKG_CONFIG_PATH: /opt/homebrew/lib/pkgconfig:/opt/homebrew/share/pkgconfig
+        run: |
+          make lang resources
+          go build -ldflags "-s -w -X main.program=mgmt -X main.version=${{ github.ref_name }}" -o mgmt-static-darwin-arm64 .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mgmt-static-darwin-arm64
+          path: mgmt-static-darwin-arm64
+          retention-days: 5
+
+  # ---- Tests (runs after all builds succeed) ---------------------------------------------------------------------
+  test:
+    name: Tests
+    needs: [build-linux-amd64, build-linux-arm64, build-darwin-arm64]
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-tags: true
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install CGO dependencies
+        run: sudo apt-get update && sudo apt-get install -y libvirt-dev libaugeas-dev pkg-config gcc ragel inotify-tools
+
+      - name: Install Go tools
         run: |
           go install github.com/blynn/nex@latest
           go install golang.org/x/tools/cmd/goyacc@latest
@@ -44,33 +162,17 @@ jobs:
         run: make lang resources
 
       - name: Build mgmt
-        env:
-          GOOS: linux
-          GOARCH: ${{ matrix.arch }}
-          CGO_ENABLED: 1
-        run: |
-          make lang resources
-          go build -ldflags "-s -w -X main.program=mgmt -X main.version=${{ github.ref_name }}" -o mgmt-static-${{ matrix.os }}-${{ matrix.arch }} .
+        run: make build
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: mgmt-static-${{ matrix.os }}-${{ matrix.arch }}
-          path: mgmt-static-${{ matrix.os }}-${{ matrix.arch }}
-          retention-days: 5
+      - name: Run tests (quick smoke)
+        run: TEST_BLOCK=basic TEST_GROUP=1 make test
 
-  # ---- macOS build (arm64) ------------------------------------------------------------------------------------------------
-  # TEMPORARILY DISABLED -- GNU make issue (same as test.yaml)
-  # release-darwin:
-  #   name: Release Darwin (arm64)
-  #   runs-on: macos-latest
-  #   ...
-
-  # ---- Publish to GitHub Releases ----------------------------------------------------------------------------------
+  # ---- Publish to GitHub Releases --------------------------------------------------------------------------------
   publish:
     name: Publish
-    needs: [release-linux]
+    needs: [build-linux-amd64, build-linux-arm64, build-darwin-arm64, test]
     runs-on: ubuntu-26.04
+    if: needs.test.result == 'success'
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v4
@@ -86,5 +188,7 @@ jobs:
         with:
           files: |
             mgmt-static-linux-amd64
+            mgmt-static-linux-arm64
+            mgmt-static-darwin-arm64
             checksums.txt
           draft: true
