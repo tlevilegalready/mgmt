@@ -61,6 +61,9 @@ jobs:
           go-version-file: go.mod
           cache: true
 
+      - name: Install GNU make
+        run: brew install make
+
       - name: Install Go tools (nex, goyacc, stringer, goimports)
         run: |
           go install github.com/blynn/nex@latest

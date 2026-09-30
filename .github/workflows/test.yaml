@@ -24,6 +24,10 @@ jobs:
           go-version-file: go.mod
           cache: true
 
+      - name: Install GNU make (macOS)
+        if: matrix.os == 'macos-latest'
+        run: brew install make
+
       - name: Install CGO dependencies
         if: matrix.os == 'ubuntu-latest'
         run: sudo apt-get update && sudo apt-get install -y libvirt-dev libaugeas-dev pkg-config gcc
@@ -109,6 +113,9 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
+
+      - name: Install GNU make
+        run: brew install make
 
       - name: Install CGO dependencies
         run: brew install libvirt augeas pkg-config
