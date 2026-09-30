@@ -17,6 +17,7 @@ jobs:
       fail-fast: false
       matrix:
         arch: [amd64, arm64]
+        os: [linux]
     steps:
       - uses: actions/checkout@v6
         with:
@@ -46,12 +47,12 @@ jobs:
           CGO_ENABLED: 1
         run: |
           make lang resources
-          go build -ldflags "-s -w -X main.program=mgmt -X main.version=${{ github.ref_name }}" -o mgmt-${{ matrix.arch }} .
+          go build -ldflags "-s -w -X main.program=mgmt -X main.version=${{ github.ref_name }}" -o mgmt-static-${{ matrix.os }}-${{ matrix.arch }} .
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: mgmt-linux-${{ matrix.arch }}
+          name: mgmt-static-${{ matrix.os }}-${{ matrix.arch }}
           path: mgmt-${{ matrix.arch }}
           retention-days: 5
 
@@ -81,9 +82,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            mgmt-linux-amd64
-            mgmt-linux-arm64
-            # mgmt-darwin-arm64  # disabled until macOS make issue resolved
+            mgmt-static-linux-amd64
+            mgmt-static-linux-arm64
+            # mgmt-static-darwin-arm64  # disabled until macOS make issue resolved
             checksums.txt
           draft: false
           prerelease: ${{ contains(github.ref_name, '-') }}
