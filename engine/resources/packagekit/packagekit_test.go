@@ -57,3 +57,23 @@ func TestNewPkErrorInvalidBody(t *testing.T) {
 		t.Errorf("expected error")
 	}
 }
+
+func TestInstalledInData(t *testing.T) {
+	tests := []struct {
+		data string
+		want bool
+	}{
+		{"installed", true},                   // fedora, installed
+		{"installed:updates", true},           // fedora, installed with repo
+		{"fedora", false},                     // fedora, available
+		{"manual:ubuntu-resolute-main", true}, // debian, manually installed
+		{"auto:debian-main", true},            // debian, auto installed
+		{"ubuntu-resolute-universe", false},   // debian, available
+		{"", false},
+	}
+	for _, tt := range tests {
+		if got := InstalledInData(tt.data); got != tt.want {
+			t.Errorf("InstalledInData(%q) = %t, want %t", tt.data, got, tt.want)
+		}
+	}
+}

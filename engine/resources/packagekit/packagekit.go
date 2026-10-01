@@ -460,15 +460,11 @@ func (obj *Conn) IsInstalledList(ctx context.Context, packages []string) ([]bool
 		s := strings.Split(packageID, ";")
 		//if len(s) != 4 { continue } // this would be a bug!
 		pkg := s[0]
-		flags := strings.Split(s[3], ":")
-		for _, f := range flags {
-			if f == "installed" {
-				if _, exists := m[pkg]; !exists {
-					m[pkg] = 0
-				}
-				m[pkg]++ // if we see pkg installed, increment
-				break
+		if InstalledInData(s[3]) {
+			if _, exists := m[pkg]; !exists {
+				m[pkg] = 0
 			}
+			m[pkg]++ // if we see pkg installed, increment
 		}
 	}
 
@@ -940,7 +936,7 @@ func (obj *Conn) PackagesToPackageIDs(ctx context.Context, packageMap map[string
 			}
 		}
 
-		if FlagInData("installed", data) {
+		if InstalledInData(data) {
 			installed[index] = true
 			version[index] = ver
 			// state of "uninstalled" matched during CheckApply, and
@@ -1128,6 +1124,22 @@ func FlagInData(flag, data string) bool {
 	flags := strings.Split(data, ":")
 	for _, f := range flags {
 		if f == flag {
+			return true
+		}
+	}
+	return false
+}
+
+// installedFlags are the data flags that mark a package as installed. Fedora
+// uses "installed", while the Debian and Ubuntu apt backend uses "manual" or
+// "auto" depending on how the package was installed.
+var installedFlags = []string{"installed", "manual", "auto"}
+
+// InstalledInData asks whether the data portion of a packageID field marks the
+// package as installed, for any of the known backend conventions.
+func InstalledInData(data string) bool {
+	for _, flag := range installedFlags {
+		if FlagInData(flag, data) {
 			return true
 		}
 	}
