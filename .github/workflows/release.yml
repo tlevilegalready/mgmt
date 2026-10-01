@@ -46,12 +46,12 @@ jobs:
       - name: Install system dependencies
         run: |
           if [ "${{ matrix.runner }}" = "macos-latest" ]; then
-            brew install make gnu-sed ragel libvirt augeas libxml2
+            brew install make gnu-sed ragel
             echo "$(brew --prefix)/opt/make/libexec/gnubin" >> $GITHUB_PATH
             export PKG_CONFIG_PATH="$(brew --prefix)/lib/pkgconfig:$(brew --prefix)/share/pkgconfig:$PKG_CONFIG_PATH"
             echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH" >> $GITHUB_ENV
           else
-            sudo apt-get update && sudo apt-get install -y libvirt-dev libaugeas-dev pkg-config gcc ragel
+            sudo apt-get update && sudo apt-get install -y ragel
           fi
 
       - name: Install Go tools
@@ -65,10 +65,11 @@ jobs:
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
-          CGO_ENABLED: 1
+          # linux is fully static; darwin needs cgo (lang/core/sys)
+          CGO_ENABLED: ${{ matrix.goos == 'linux' && '0' || '1' }}
         run: |
           make lang resources
-          go build -ldflags "-s -w -X main.program=mgmt -X main.version=${{ github.ref_name }}" -o mgmt-static-${{ matrix.name }} .
+          go build -tags noaugeas,novirt -ldflags "-s -w -X main.program=mgmt -X main.version=${{ github.ref_name }}" -o mgmt-static-${{ matrix.name }} .
 
       - name: Upload artifact
         uses: actions/upload-artifact@v7
