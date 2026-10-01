@@ -3,6 +3,10 @@ name: Test
 on:
   pull_request:
   push:
+    branches:
+      - '*'
+    tags-ignore:
+      - 'v*'
   schedule:
     - cron: '0 4 * * 1'  # weekly Monday 04:00 UTC (regression safety net)
 concurrency:
