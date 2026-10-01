@@ -8,8 +8,10 @@ permissions:
   contents: write
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref_type }}-${{ github.ref }}
   cancel-in-progress: true
+  # Cancel old runs for same workflow + ref_type + ref
+  # e.g., only cancel old 'main' branch runs, not old tag runs
 
 jobs:
   # ---- Builds (linux-amd64, linux-arm64, darwin-arm64) ------------------------------------------------------------

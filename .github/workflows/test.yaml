@@ -6,8 +6,10 @@ on:
   schedule:
     - cron: '0 4 * * 1'  # weekly Monday 04:00 UTC (regression safety net)
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref_type }}-${{ github.ref }}
   cancel-in-progress: true
+  # Cancel old runs for same workflow + ref_type + ref
+  # e.g., only cancel old 'main' branch runs, not old tag runs
 
 jobs:
   # ---- Build (Linux) ---------------------------------------------------
