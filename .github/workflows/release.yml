@@ -137,4 +137,4 @@ jobs:
             mgmt-static-linux-arm64
             mgmt-static-darwin-arm64
             checksums.txt
-          draft: true
+          draft: false
