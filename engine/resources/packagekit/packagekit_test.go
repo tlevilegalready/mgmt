@@ -73,7 +73,7 @@ func TestInstalledInData(t *testing.T) {
 	}
 	for _, tt := range tests {
 		if got := InstalledInData(tt.data); got != tt.want {
-			t.Errorf("InstalledInData(%q) = %t, want %t", tt.data, got, tt.want)
+			t.Errorf("installedInData(%q) = %t, want %t", tt.data, got, tt.want)
 		}
 	}
 }
